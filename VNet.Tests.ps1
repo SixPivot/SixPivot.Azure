@@ -157,7 +157,7 @@ Free block(s) of 8 starting at 10.0.1.80
 Free block(s) starting at 10.0.1.96
 '@)
 
-        $expected = $expected.Split("`r`n")
+        $expected = @($expected -split "\r\n|\r|\n")
 
         Mock -ModuleName VNet -CommandName Get-AzVirtualNetwork { return $vnetWithFragmentedSubnets }
 

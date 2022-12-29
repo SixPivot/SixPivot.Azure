@@ -9,31 +9,29 @@ on:
 
 jobs:
 
+  # ""
   test:
-    runs-on: windows-2019
+    strategy:
+      fail-fast: true
+      matrix:
+        version: [6.2.4-ubuntu-18.04, ]
+        include:
+          - networkVersion: "2.5.0" # https://www.powershellgallery.com/packages/Az.Network/2.5.0/Content/Az.Network.psm1
+            version: 6.2.4-ubuntu-18.04
+
+    runs-on: ubuntu-22.04
+    container: mcr.microsoft.com/powershell:${{ matrix.version }}
     steps:
       - uses: actions/checkout@v3
 
       - name: Install Pester Module
         run: |
+          $ErrorActionPreference = 'Stop'
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -Scope CurrentUser -Repository PSGallery -Force
-          Install-Module -Name Az.Network -Scope CurrentUser -Repository PSGallery -Force
-        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+          Install-Module -Name Az.Network -requiredVersion ${{ matrix.networkVersion }} -Scope CurrentUser -Repository PSGallery -Force -Verbose
 
-      - name: Print PATH env variables in runner
-        run: |
-          Write-Output "PATH (MACHINE):"
-          [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-          Write-Output ""
-          Write-Output "PATH (USER):"
-          [System.Environment]::GetEnvironmentVariable("Path", "User")
-          Write-Output ""
-          Write-Output "PATHEXT (MACHINE):"
-          [System.Environment]::GetEnvironmentVariable("PATHEXT", "Machine")
-          Write-Output ""
-          Write-Output "PATHEXT (USER):"
-          [System.Environment]::GetEnvironmentVariable("PATHEXT", "User")
+          Get-InstalledModule
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
 
       - name: Run Pester Tests

@@ -93,5 +93,7 @@ jobs:
       - lint
       - test
     steps:
+      - uses: actions/checkout@v3
+
       - run: Publish-Module -Path "${{ github.workspace }}" -NugetAPIKey "GUID" -WhatIf -Verbose
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"

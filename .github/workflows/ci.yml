@@ -50,6 +50,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
     needs:
       - test
     steps:
@@ -60,5 +61,13 @@ jobs:
           Install-Module -Name Az.Network -Scope CurrentUser -Repository PSGallery -Force
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
 
-      - run: Publish-Module -Path "${{ github.workspace }}" -NugetAPIKey "GUID" -WhatIf -Verbose
+      - run: |
+          $params = @{
+              Path        = "${{ github.workspace }}"
+              NuGetApiKey = "${{ secrets.NUGETAPIKEY }}"
+              ErrorAction = "Stop"
+          }
+
+          Publish-Module @params -Verbose
+
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"

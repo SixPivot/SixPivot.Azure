@@ -1,2 +1,3 @@
-# sixpivot-azure-powershell-module
-PowerShell module with Azure-related cmdlets
+# SixPivot.Azure PowerShell module
+
+A PowerShell module with Azure-related cmdlets

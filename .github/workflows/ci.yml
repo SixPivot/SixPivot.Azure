@@ -57,6 +57,7 @@ jobs:
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -Scope CurrentUser -Repository PSGallery -Force
+          Install-Module -Name Az.Network -Scope CurrentUser -Repository PSGallery -Force
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
 
       - name: Print PATH env variables in runner
@@ -85,4 +86,14 @@ jobs:
 
           Invoke-Pester -Configuration $cfg
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+    steps:
+      - run: Publish-Module -Path "${{ github.workspace }}" -NugetAPIKey "GUID" -WhatIf -Verbose
+        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+
 

@@ -95,5 +95,3 @@ jobs:
     steps:
       - run: Publish-Module -Path "${{ github.workspace }}" -NugetAPIKey "GUID" -WhatIf -Verbose
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
-
-

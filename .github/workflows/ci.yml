@@ -95,5 +95,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Az.Network -Scope CurrentUser -Repository PSGallery -Force
+        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+
       - run: Publish-Module -Path "${{ github.workspace }}" -NugetAPIKey "GUID" -WhatIf -Verbose
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"

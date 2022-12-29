@@ -1,0 +1,88 @@
+name: CI
+
+on: push
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3
+
+      - name: Install PSScriptAnalyzer Module
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Repository PSGallery -Force
+        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+
+      - name: Run PSScriptAnalyzer
+        run: |
+          Import-Module PSScriptAnalyzer
+          # Prevent ANSI escape sequences in commit comment in PS 7.2+
+          if ($PSStyle.OutputRendering) {
+            $PSStyle.OutputRendering = 'Host'
+          }
+          $PSSAResults = Invoke-ScriptAnalyzer -Path "$ENV:GITHUB_WORKSPACE" -ExcludeRule PSAvoidTrailingWhitespace -Recurse -Verbose
+          $SUMMARY     = ($PSSAResults | Group-Object -Property Severity -NoElement | Foreach-Object { "- $($_.Count) $($_.Name)" }) -join [Environment]::NewLine
+          $DETAILS     = ($PSSAResults | Format-List -Property @{'Name' = 'Location'; 'Expression' = { "{0} [{1}, {2}]" -f (Resolve-Path -LiteralPath $_.ScriptPath -Relative), $_.Line, $_.Column }}, RuleName, Severity, Message | Out-String -Width 88).Trim()
+          $STRINGBODY  = "PSScriptAnalyzer results as of this commit:
+
+          $SUMMARY
+
+          <details><summary>See details</summary>
+
+          ``````
+          $DETAILS
+          ``````
+
+          </details>
+          " | ConvertTo-Json -Compress
+
+          $BODY = '"body":{0}' -f $STRINGBODY
+          Set-Content -LiteralPath 'COMMENTBODY.json' -Value "{$BODY}"
+        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+
+#      - name: Add commit comment
+#        run: |
+#          curl -sL --data @COMMENTBODY.json \
+#            -H "Content-Type: application/json" \
+#            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+#            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments"
+
+  test:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@3
+
+      - name: Install Pester Module
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Scope CurrentUser -Repository PSGallery -Force
+        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+
+      - name: Print PATH env variables in runner
+        run: |
+          Write-Output "PATH (MACHINE):"
+          [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+          Write-Output ""
+          Write-Output "PATH (USER):"
+          [System.Environment]::GetEnvironmentVariable("Path", "User")
+          Write-Output ""
+          Write-Output "PATHEXT (MACHINE):"
+          [System.Environment]::GetEnvironmentVariable("PATHEXT", "Machine")
+          Write-Output ""
+          Write-Output "PATHEXT (USER):"
+          [System.Environment]::GetEnvironmentVariable("PATHEXT", "User")
+        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+
+      - name: Run Pester Tests
+        run: |
+          Import-Module Pester
+
+          $cfg = [PesterConfiguration]::Default
+          $cfg.Output.Verbosity = 'Detailed'
+          $cfg.CodeCoverage.Enabled = $true
+          $cfg.Run.Exit = $true
+
+          Invoke-Pester -Configuration $cfg
+        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+

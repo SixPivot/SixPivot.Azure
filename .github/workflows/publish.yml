@@ -22,7 +22,8 @@ jobs:
           # for how to keep the manifest updated.
 
           Update-ModuleManifest -Path ./SixPivot.Azure.psd1 -ModuleVersion ${{ github.event.release.tag_name }} -ReleaseNotes @'
-          ${{ github.event.release.body }}'@
+          ${{ github.event.release.body }}
+          '@
 
           $params = @{
               Path        = "${{ github.workspace }}"

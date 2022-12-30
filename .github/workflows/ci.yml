@@ -89,13 +89,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Nerdbank.GitVersioning
+        uses: dotnet/nbgv@v0.4.0
+        id: nbgv
 
       - run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module -Name Az.Network -Scope CurrentUser -Repository PSGallery -Force
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+        name: Install modules
 
       - run: |
+          # If we add more functions then take a look at https://github.com/microsoft/navcontainerhelper/blob/d909f750c48747898c0bd174d5ccf493d5f9f062/.github/workflows/Release.yaml#L40
+          # for how to keep the manifest updated.
+
+          Update-ModuleManifest -Path ./SixPivot.Azure.psd1 -ModuleVersion ${{ steps.nbgv.outputs.SimpleVersion }}
+
           $params = @{
               Path        = "${{ github.workspace }}"
               NuGetApiKey = "${{ secrets.NUGETAPIKEY }}"
@@ -103,5 +115,5 @@ jobs:
           }
 
           Publish-Module @params -Verbose
-
-        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
+        shell: pwsh
+        name: Publish

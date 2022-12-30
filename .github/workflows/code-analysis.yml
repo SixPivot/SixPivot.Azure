@@ -9,7 +9,7 @@ on:
 
 jobs:
   pssa:
-    name: PSScriptAnalyzer
+    name: Script Analyzer
     runs-on: windows-latest
     permissions:
       actions: read

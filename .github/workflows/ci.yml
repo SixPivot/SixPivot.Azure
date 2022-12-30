@@ -120,3 +120,4 @@ jobs:
           makeLatest: true
           commit: main
           tag: v${{ steps.nbgv.outputs.SimpleVersion }}
+          token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}

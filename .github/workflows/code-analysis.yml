@@ -23,8 +23,6 @@ jobs:
       - name: PowerShell Module Cache
         uses: potatoqualitee/psmodulecache@v5.2
         with:
-          # This doesn't update modules, so might want to pin version later to know which we use like ConverToSARIF:1.0.0
-          # or run Update-Module on a weekly/monthly interval
           modules-to-cache: PSScriptAnalyzer, ConvertToSARIF
           allow-prerelease: false
 

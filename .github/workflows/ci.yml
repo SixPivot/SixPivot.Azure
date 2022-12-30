@@ -65,24 +65,26 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Remove old Pester
+        run: |
+          # https://pester.dev/docs/introduction/installation#removing-the-built-in-version-of-pester
+          $module = "C:\Program Files\WindowsPowerShell\Modules\Pester"
+          takeown /F $module /A /R
+          icacls $module /reset
+          icacls $module /grant "*S-1-5-32-544:F" /inheritance:d /T
+          Remove-Item -Path $module -Recurse -Force -Confirm:$false
+        shell: powershell
+
       - name: PowerShell Module Cache
         uses: potatoqualitee/psmodulecache@v5.2
         with:
           modules-to-cache: Pester, Az.Network, Az.Accounts
           shell: powershell
 
-      - name: Install Pester Module
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -Scope CurrentUser -Repository PSGallery -Force
-          Install-Module -Name Az.Network -Scope CurrentUser -Repository PSGallery -Force -Verbose
-
-          Get-InstalledModule
-        shell: powershell
-
       - name: Run Pester Tests
         run: |
+          Get-InstalledModule
+
           Import-Module Pester
 
           $cfg = [PesterConfiguration]::Default

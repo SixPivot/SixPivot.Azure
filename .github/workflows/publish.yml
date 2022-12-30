@@ -21,7 +21,8 @@ jobs:
           # If we add more functions then take a look at https://github.com/microsoft/navcontainerhelper/blob/d909f750c48747898c0bd174d5ccf493d5f9f062/.github/workflows/Release.yaml#L40
           # for how to keep the manifest updated.
 
-          Update-ModuleManifest -Path ./SixPivot.Azure.psd1 -ModuleVersion ${{ github.event.release.tag_name }} -ReleaseNotes '${{ github.event.release.body }}'
+          Update-ModuleManifest -Path ./SixPivot.Azure.psd1 -ModuleVersion ${{ github.event.release.tag_name }} -ReleaseNotes @'
+          ${{ github.event.release.body }}'@
 
           $params = @{
               Path        = "${{ github.workspace }}"

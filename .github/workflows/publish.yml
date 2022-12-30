@@ -1,0 +1,34 @@
+name: Publish
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ github.event.release.tag_name }}"
+
+      - uses: actions/checkout@v3
+
+      - name: PowerShell Module Cache
+        uses: potatoqualitee/psmodulecache@v5.2
+        with:
+          modules-to-cache: Az.Network
+
+      - run: |
+          # If we add more functions then take a look at https://github.com/microsoft/navcontainerhelper/blob/d909f750c48747898c0bd174d5ccf493d5f9f062/.github/workflows/Release.yaml#L40
+          # for how to keep the manifest updated.
+
+          Update-ModuleManifest -Path ./SixPivot.Azure.psd1 -ModuleVersion ${{ github.event.release.tag_name }} -ReleaseNotes '${{ github.event.release.body }}'
+
+          $params = @{
+              Path        = "${{ github.workspace }}"
+              NuGetApiKey = "${{ secrets.NUGETAPIKEY }}"
+              ErrorAction = "Stop"
+          }
+
+          Publish-Module @params -Verbose
+        shell: pwsh
+        name: Publish

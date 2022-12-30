@@ -9,8 +9,8 @@ on:
 
 jobs:
 
-  # ""
   test:
+    name: Test Linux
     strategy:
       fail-fast: true
 
@@ -57,6 +57,7 @@ jobs:
         shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
 
   test-windows:
+    name: Test Windows
     strategy:
       fail-fast: true
       matrix:
@@ -95,13 +96,15 @@ jobs:
           Invoke-Pester -Configuration $cfg
         shell: powershell
 
-  publish:
+  create-release:
+    name: Create Release
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' }}
     needs:
       - test
       - test-windows
-
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -111,24 +114,9 @@ jobs:
         uses: dotnet/nbgv@v0.4.0
         id: nbgv
 
-      - run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module -Name Az.Network -Scope CurrentUser -Repository PSGallery -Force
-        shell: pwsh -Command "$ProgressPreference = 'SilentlyContinue'; & '{0}'"
-        name: Install modules
-
-      - run: |
-          # If we add more functions then take a look at https://github.com/microsoft/navcontainerhelper/blob/d909f750c48747898c0bd174d5ccf493d5f9f062/.github/workflows/Release.yaml#L40
-          # for how to keep the manifest updated.
-
-          Update-ModuleManifest -Path ./SixPivot.Azure.psd1 -ModuleVersion ${{ steps.nbgv.outputs.SimpleVersion }}
-
-          $params = @{
-              Path        = "${{ github.workspace }}"
-              NuGetApiKey = "${{ secrets.NUGETAPIKEY }}"
-              ErrorAction = "Stop"
-          }
-
-          Publish-Module @params -Verbose
-        shell: pwsh
-        name: Publish
+      - uses: ncipollo/release-action@v1
+        with:
+          generateReleaseNotes: true
+          makeLatest: true
+          commit: main
+          tag: v${{ steps.nbgv.outputs.SimpleVersion }}

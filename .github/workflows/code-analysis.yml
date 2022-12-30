@@ -24,7 +24,6 @@ jobs:
         uses: potatoqualitee/psmodulecache@v5.2
         with:
           modules-to-cache: PSScriptAnalyzer, ConvertToSARIF
-          allow-prerelease: false
 
       # Not using microsoft/psscriptanalyzer-action@v1.0 because we're missing psm1 in src + need to exclude generated ps1xml
       - name: Run PSScriptAnalyzer

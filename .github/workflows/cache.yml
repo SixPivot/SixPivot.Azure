@@ -12,7 +12,9 @@ jobs:
     container: mcr.microsoft.com/powershell:ubuntu-22.04
     steps:
 
-      - uses: actions/checkout@v3
+      - run: |
+          Get-ChildItem Env: | Sort-Object Name | Format-Table -Wrap -AutoSize
+        shell: pwsh
 
       - name: PowerShell Module Cache
         uses: potatoqualitee/psmodulecache@v5.2

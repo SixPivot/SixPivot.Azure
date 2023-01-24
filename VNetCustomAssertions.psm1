@@ -19,7 +19,7 @@ function Should-BeVNetSummary {
             throw "-Negate is not supported"
         }
 
-        $failureMessage = Compare-Object -ReferenceObject $ExpectedValue -DifferenceObject $ActualValue -Property VNetStart, VNetEnd, Available, Subnets
+        $failureMessage = Compare-Object -ReferenceObject $ExpectedValue -DifferenceObject $ActualValue -Property VNetStart, VNetEnd, Available, Subnets | Out-String
 
         if ($failureMessage) {
             $succeeded = $false
@@ -30,7 +30,7 @@ function Should-BeVNetSummary {
 
         return [pscustomobject]@{
             Succeeded      = $succeeded
-            FailureMessage = $failureMessage
+            FailureMessage = "oh dear [$failureMessage]"
         }
     }
 }

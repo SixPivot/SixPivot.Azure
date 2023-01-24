@@ -101,24 +101,28 @@ function Find-FreeSubnets {
             $ipEnd = ($ipNum -bor (-bnot $mask))
 
             # return as tuple of strings:
-            #([BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipStart)) | ForEach-Object { $_ } ) -join '.'
             $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipStart))
             New-Object -TypeName "Net.IPAddress" -argumentList (, $bytes)
-            #([BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipEnd)) | ForEach-Object { $_ } ) -join '.'
             $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipEnd))
             New-Object Net.IPAddress -ArgumentList (, $bytes)
         }
 
         $vnet = Get-AzVirtualNetwork -Name $VNetName -ResourceGroupName $ResourceGroup
 
-        $vnetStart, $vnetEnd = cidrToIpRange $vnet.AddressSpace.AddressPrefixes
+        [Net.IPAddress] $vnetStart, [Net.IPAddress] $vnetEnd = cidrToIpRange $vnet.AddressSpace.AddressPrefixes
 
         $result = [VNetSummary]::new()
         $result.VNetStart = $vnetStart
         $result.VNetEnd = $vnetEnd
-        #"VNET $vnetStart - $vnetEnd"
 
-        $sorted = $vnet.Subnets.AddressPrefix | Sort-Object -Property {
+        # Create fake subnet immediately following the end of the VNet
+        $ipNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($vnetEnd.GetAddressBytes(), 0)) + 1
+        $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipNum))
+        [Net.IPAddress] $afterLastAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
+
+        $afterLastAvailableCidr = "$afterLastAvailable/31"
+
+        $sorted = ($vnet.Subnets.AddressPrefix + $afterLastAvailableCidr) | Sort-Object -Property {
             $addr, $maskLength = $_ -split '/'
 
             $ip = ([Net.IPAddress] $addr)
@@ -156,7 +160,6 @@ function Find-FreeSubnets {
                 $free.End = $lastAvailable
                 $free.Size = $startNum - $nextAvailableNum
                 $result.Available += $free
-                #"Free block(s) of $($startNum - $nextAvailableNum) starting at $nextAvailable"
 
                 for ($i = $nextAvailableNum; $i -lt $startNum; $i += 8) {
                     $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($i))
@@ -173,8 +176,6 @@ function Find-FreeSubnets {
                             $possibleFreeEndNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($possibleFreeEnd.GetAddressBytes(), 0))
                             if ($possibleFreeEndNum -lt $startNum) {
                                 $free.CIDRAvailable += $freeCidr
-
-                                #"           " + $freeCidr
                             }
                         }
                     }
@@ -183,13 +184,13 @@ function Find-FreeSubnets {
 
             $notFirst = $true
 
-            #"{0,18} : {1,15} - {2,15}" -f $cidr, $start, $end
-
-            $subnet = [Subnet]::new()
-            $subnet.CIDR = $cidr
-            $subnet.Start = $start
-            $subnet.End = $end
-            $result.Subnets += $subnet
+            if ($cidr -ne $afterLastAvailableCidr) {
+                $subnet = [Subnet]::new()
+                $subnet.CIDR = $cidr
+                $subnet.Start = $start
+                $subnet.End = $end
+                $result.Subnets += $subnet
+            }
 
             $nextAvailableNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($end.GetAddressBytes(), 0)) + 1
 
@@ -199,8 +200,6 @@ function Find-FreeSubnets {
         if ($end -ne $vnetEnd) {
             $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($nextAvailableNum))
             $nextAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
-
-            #"Free block(s) starting at $nextAvailable"
         }
 
         $result

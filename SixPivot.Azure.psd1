@@ -33,7 +33,7 @@ Copyright = '(c) SixPivot'
 Description = 'Azure cmdlets created by SixPivot'
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '7.0'
+PowerShellVersion = '5.1'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''

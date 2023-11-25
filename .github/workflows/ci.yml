@@ -79,7 +79,7 @@ jobs:
         shell: powershell
 
       - name: PowerShell Module Cache
-        uses: potatoqualitee/psmodulecache@v5.2
+        uses: potatoqualitee/psmodulecache@v6.0
         with:
           modules-to-cache: Pester, Az.Network, Az.Accounts
           shell: powershell

@@ -28,8 +28,10 @@ jobs:
             networkVersion: "5.2.0"
           - version: preview-ubuntu-22.04 # 7.4 Preview
             networkVersion: "5.2.0"
-          - version: preview-ubuntu-22.04 # 7.4 Preview
+          - version: ubuntu-22.04 # 7.4 Preview
             networkVersion: "7.0.0"
+          - version: ubuntu-22.04
+            networkVersion: "7.8.0"
 
     runs-on: ubuntu-22.04
     container: mcr.microsoft.com/powershell:${{ matrix.version }}
@@ -39,6 +41,7 @@ jobs:
       - name: Install Pester Module
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSVersionTable
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -Scope CurrentUser -Repository PSGallery -Force
           Install-Module -Name Az.Network -requiredVersion ${{ matrix.networkVersion }} -Scope CurrentUser -Repository PSGallery -Force -Verbose
@@ -122,4 +125,4 @@ jobs:
           makeLatest: true
           commit: main
           tag: v${{ steps.nbgv.outputs.SimpleVersion }}
-          token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
+          #token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}

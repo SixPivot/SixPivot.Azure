@@ -24,13 +24,13 @@ jobs:
           #   networkVersion: "5.2.0"
           - version: lts-ubuntu-22.04 # 7.2 LTS Current
             networkVersion: "5.2.0"
-          - version: ubuntu-22.04 # 7.3 Stable
+          - version: ubuntu-22.04 # 7.4 Stable
             networkVersion: "5.2.0"
-          - version: preview-ubuntu-22.04 # 7.4 Preview
+          - version: preview-ubuntu-22.04 # 7.5 Preview
             networkVersion: "5.2.0"
-          - version: ubuntu-22.04 # 7.4 Preview
+          - version: ubuntu-22.04 # 7.4
             networkVersion: "7.0.0"
-          - version: ubuntu-22.04
+          - version: ubuntu-22.04 # 7.4
             networkVersion: "7.8.0"
 
     runs-on: ubuntu-22.04
@@ -125,4 +125,4 @@ jobs:
           makeLatest: true
           commit: main
           tag: v${{ steps.nbgv.outputs.SimpleVersion }}
-          #token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
+          token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}

@@ -18,8 +18,8 @@ jobs:
       # Versions in support - https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-support-lifecycle?view=powershell-7.3&WT.mc_id=DOP-MVP-5001655
       matrix:
         include:
-          - version: 6.2.4-ubuntu-18.04
-            networkVersion: "2.5.0" # https://www.powershellgallery.com/packages/Az.Network/2.5.0/Content/Az.Network.psm1
+          # - version: 6.2.4-ubuntu-18.04
+          #   networkVersion: "2.5.0" # https://www.powershellgallery.com/packages/Az.Network/2.5.0/Content/Az.Network.psm1
           # - version: 7.0.3-ubuntu-18.04 # 7.0 LTS Out of support
           #   networkVersion: "5.2.0"
           - version: lts-ubuntu-22.04 # 7.2 LTS Current

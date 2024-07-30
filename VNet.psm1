@@ -122,7 +122,7 @@ function Find-FreeSubnets {
 
         $afterLastAvailableCidr = "$afterLastAvailable/31"
 
-        $sorted = ($vnet.Subnets.AddressPrefix + $afterLastAvailableCidr) | Sort-Object -Property {
+        $sorted = @($vnet.Subnets.AddressPrefix) + $afterLastAvailableCidr | Sort-Object -Property {
             $addr, $maskLength = $_ -split '/'
 
             $ip = ([Net.IPAddress] $addr)

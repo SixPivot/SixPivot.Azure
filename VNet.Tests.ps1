@@ -7,15 +7,14 @@ using module ./VNet.psm1
 using module Az.Network
 
 BeforeDiscovery {
-  # Loads and registers my custom assertion. Ignores usage of unapproved verb with -DisableNameChecking
-  Import-Module "$PSScriptRoot/VNetCustomAssertions.psm1" -DisableNameChecking
+    # Loads and registers my custom assertion. Ignores usage of unapproved verb with -DisableNameChecking
+    Import-Module "$PSScriptRoot/VNetCustomAssertions.psm1" -DisableNameChecking
 }
 
 Describe "Find-FreeSubnets" {
     It "Returns expected output" {
 
-
-$vnetWithFragmentedSubnets = @"
+        $vnetWithFragmentedSubnets = @"
 {
     "AddressSpace": {
       "AddressPrefixes": [

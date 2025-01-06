@@ -1,0 +1,19 @@
+root = true
+
+# All files
+[*]
+indent_style = space
+
+# Xml files
+[*.{xml,ps1xml}]
+indent_size = 2
+
+# PowerShell files
+[*.{ps1,psm1,psd1}]
+
+# Indentation and spacing
+indent_size = 4
+tab_width = 4
+
+insert_final_newline = true
+trim_trailing_whitespace = true

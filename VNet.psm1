@@ -152,7 +152,7 @@ function Find-FreeSubnets {
                 $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($nextAvailableNum))
                 $nextAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
 
-                $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($startNum-1))
+                $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($startNum - 1))
                 $lastAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
 
                 $free = [Free]::new()

@@ -8,6 +8,15 @@ class Subnet {
     }
 }
 
+class VNetRange {
+    [NET.IPAddress] $Start
+    [NET.IPAddress] $End
+
+    [string] ToString() {
+        return $this.Start + "-" + $this.End
+    }
+}
+
 class Free {
     [NET.IPAddress] $Start
     [NET.IPAddress] $End
@@ -22,6 +31,7 @@ class Free {
 class VNetSummary {
     [string] $VNetStart
     [string] $VNetEnd
+    [VNetRange[]] $VNetRanges
     [free[]] $Available
     [subnet[]] $Subnets
 }
@@ -50,6 +60,11 @@ class VNetSummary {
     VNet Start VNet End     Available Subnets
     ---------- --------     --------- -------
     10.0.0.0   10.0.255.255 {48, 8}   {10.0.0.0/24, 10.0.1.0/28, 10.0.1.64/28, 10.0.1.88/29}
+
+    If the virtual network has multiple address ranges, VNetStart and VNetEnd are those of the last range.
+    In that case, 'Available' and 'Subnets' contain all available ranges and all subnets of all address ranges.
+
+    'VNetRanges' contains the start and end of each address range in the virtual network.
 
     And the 'Available' property contains:
 
@@ -108,93 +123,102 @@ function Find-FreeSubnets {
         }
 
         $vnet = Get-AzVirtualNetwork -Name $VNetName -ResourceGroupName $ResourceGroup
-
-        [Net.IPAddress] $vnetStart, [Net.IPAddress] $vnetEnd = cidrToIpRange $vnet.AddressSpace.AddressPrefixes
-
         $result = [VNetSummary]::new()
-        $result.VNetStart = $vnetStart
-        $result.VNetEnd = $vnetEnd
 
-        # Create fake subnet immediately following the end of the VNet
-        $ipNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($vnetEnd.GetAddressBytes(), 0)) + 1
-        $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipNum))
-        [Net.IPAddress] $afterLastAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
+        $vnetAddressPrefixes = $vnet.AddressSpace.AddressPrefixes
+        foreach($addressPrefix in $vnetAddressPrefixes)
+        {
+            [Net.IPAddress] $vnetStart, [Net.IPAddress] $vnetEnd = cidrToIpRange $addressPrefix
 
-        $afterLastAvailableCidr = "$afterLastAvailable/31"
+            $result.VNetStart = $vnetStart
+            $result.VNetEnd = $vnetEnd
 
-        $sorted = @($vnet.Subnets.AddressPrefix) + $afterLastAvailableCidr | Sort-Object -Property {
-            $addr, $maskLength = $_ -split '/'
+            $vnetRange = [VNetRange]::new()
+            $vnetRange.Start = $vnetStart
+            $vnetRange.End = $vnetEnd
+            $result.VNetRanges += $vnetRange
 
-            $ip = ([Net.IPAddress] $addr)
-            $ipNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($ip.GetAddressBytes(), 0))
-            $ipNum
-        }
+            # Create fake subnet immediately following the end of the VNet
+            $ipNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($vnetEnd.GetAddressBytes(), 0)) + 1
+            $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipNum))
+            [Net.IPAddress] $afterLastAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
 
-        $maskToAddresses = @{ 28 = 16; 27 = 32; 26 = 64; 25 = 128 }
-        $addressToStarts = @{
-        }
+            $afterLastAvailableCidr = "$afterLastAvailable/31"
 
-        $maskToAddresses.Values | ForEach-Object {
-            $addressToStarts.Add($_, $(for ($i = 0; $i -lt 255; $i += $_) { $i }))
-        }
+            $sorted = @($vnet.Subnets.AddressPrefix) + $afterLastAvailableCidr | Sort-Object -Property {
+                $addr, $maskLength = $_ -split '/'
 
-        $nextAvailableNum = 0
+                $ip = ([Net.IPAddress] $addr)
+                $ipNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($ip.GetAddressBytes(), 0))
+                $ipNum
+            }
 
-        $notFirst = $false
+            $maskToAddresses = @{ 28 = 16; 27 = 32; 26 = 64; 25 = 128 }
+            $addressToStarts = @{
+            }
 
-        foreach ($cidr in $sorted) {
+            $maskToAddresses.Values | ForEach-Object {
+                $addressToStarts.Add($_, $(for ($i = 0; $i -lt 255; $i += $_) { $i }))
+            }
 
-            $start, $end = cidrToIpRange $cidr
+            $nextAvailableNum = 0
 
-            $startNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($start.GetAddressBytes(), 0))
-            if ($notFirst -and $nextAvailableNum -ne $startNum ) {
+            $notFirst = $false
 
-                $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($nextAvailableNum))
-                $nextAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
+            foreach ($cidr in $sorted) {
 
-                $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($startNum - 1))
-                $lastAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
+                $start, $end = cidrToIpRange $cidr
 
-                $free = [Free]::new()
-                $free.Start = $nextAvailable
-                $free.End = $lastAvailable
-                $free.Size = $startNum - $nextAvailableNum
-                $result.Available += $free
+                $startNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($start.GetAddressBytes(), 0))
+                if ($notFirst -and $nextAvailableNum -ne $startNum ) {
 
-                for ($i = $nextAvailableNum; $i -lt $startNum; $i += 8) {
-                    $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($i))
-                    $freeIp = New-Object Net.IPAddress -ArgumentList (, $bytes)
+                    $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($nextAvailableNum))
+                    $nextAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
 
-                    foreach ($mask in ($maskToAddresses.Keys | Sort-Object)) {
-                        $address = $maskToAddresses[$mask]
-                        if ($addressToStarts[$address] -contains $bytes[3] ) {
-                            $freeCidr = $freeIp.IPAddressToString + "/$mask"
+                    $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($startNum - 1))
+                    $lastAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
 
-                            # Check this doesn't overlap next
-                            $possibleFreeStart, $possibleFreeEnd = cidrToIpRange $freeCidr
+                    $free = [Free]::new()
+                    $free.Start = $nextAvailable
+                    $free.End = $lastAvailable
+                    $free.Size = $startNum - $nextAvailableNum
+                    $result.Available += $free
 
-                            $possibleFreeEndNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($possibleFreeEnd.GetAddressBytes(), 0))
-                            if ($possibleFreeEndNum -lt $startNum) {
-                                $free.CIDRAvailable += $freeCidr
+                    for ($i = $nextAvailableNum; $i -lt $startNum; $i += 8) {
+                        $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($i))
+                        $freeIp = New-Object Net.IPAddress -ArgumentList (, $bytes)
+
+                        foreach ($mask in ($maskToAddresses.Keys | Sort-Object)) {
+                            $address = $maskToAddresses[$mask]
+                            if ($addressToStarts[$address] -contains $bytes[3] ) {
+                                $freeCidr = $freeIp.IPAddressToString + "/$mask"
+
+                                # Check this doesn't overlap next
+                                $possibleFreeStart, $possibleFreeEnd = cidrToIpRange $freeCidr
+
+                                $possibleFreeEndNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($possibleFreeEnd.GetAddressBytes(), 0))
+                                if ($possibleFreeEndNum -lt $startNum) {
+                                    $free.CIDRAvailable += $freeCidr
+                                }
                             }
                         }
                     }
                 }
+
+                $notFirst = $true
+
+                if ($cidr -ne $afterLastAvailableCidr) {
+                    $subnet = [Subnet]::new()
+                    $subnet.CIDR = $cidr
+                    $subnet.Start = $start
+                    $subnet.End = $end
+                    $result.Subnets += $subnet
+                }
+
+                $nextAvailableNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($end.GetAddressBytes(), 0)) + 1
+
+                $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipEnd))
             }
-
-            $notFirst = $true
-
-            if ($cidr -ne $afterLastAvailableCidr) {
-                $subnet = [Subnet]::new()
-                $subnet.CIDR = $cidr
-                $subnet.Start = $start
-                $subnet.End = $end
-                $result.Subnets += $subnet
-            }
-
-            $nextAvailableNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($end.GetAddressBytes(), 0)) + 1
-
-            $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipEnd))
         }
 
         if ($end -ne $vnetEnd) {

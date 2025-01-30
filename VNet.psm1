@@ -145,7 +145,14 @@ function Find-FreeSubnets {
 
             $afterLastAvailableCidr = "$afterLastAvailable/31"
 
-            $sorted = @($vnet.Subnets.AddressPrefix) + $afterLastAvailableCidr | Sort-Object -Property {
+            # create fake subnet immediately before the start of the VNet
+            $ipNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($vnetStart.GetAddressBytes(), 0)) - 1
+            $bytes = [BitConverter]::GetBytes([Net.IPAddress]::HostToNetworkOrder($ipNum))
+            [Net.IPAddress] $beforeFirstAvailable = New-Object Net.IPAddress -ArgumentList (, $bytes)
+
+            $beforeFirstAvailableCidr = "$beforeFirstAvailable/31"
+
+            $sorted = @($beforeFirstAvailableCidr) + @($vnet.Subnets.AddressPrefix) + @($afterLastAvailableCidr) | Sort-Object -Property {
                 $addr, $maskLength = $_ -split '/'
 
                 $ip = ([Net.IPAddress] $addr)
@@ -207,7 +214,7 @@ function Find-FreeSubnets {
 
                 $notFirst = $true
 
-                if ($cidr -ne $afterLastAvailableCidr) {
+                if ($cidr -ne $afterLastAvailableCidr -and $cidr -ne $beforeFirstAvailableCidr) {
                     $subnet = [Subnet]::new()
                     $subnet.CIDR = $cidr
                     $subnet.Start = $start

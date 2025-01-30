@@ -153,4 +153,60 @@ Describe "Find-FreeSubnets" {
         $expected = [VNetSummary](Get-content .\Find-FreeSubnets.Expected.json | ConvertFrom-Json)
         $result | Should -BeVNetSummary -ExpectedValue $expected
     }
+
+    It "Returns expected output with no existing subnets" {
+
+        $vnetWithNoSubnets = @"
+{
+  "AddressSpace": {
+    "AddressPrefixes": [
+      "10.1.0.0/16"
+    ]
+  },
+  "DhcpOptions": {
+    "DnsServers": null
+  },
+  "FlowTimeoutInMinutes": null,
+  "Subnets": [],
+  "BgpCommunities": null,
+  "Encryption": {
+    "Enabled": "False",
+    "Enforcement": "AllowUnencrypted"
+  },
+  "VirtualNetworkPeerings": [],
+  "ProvisioningState": "Succeeded",
+  "EnableDdosProtection": false,
+  "DdosProtectionPlan": null,
+  "IpAllocations": [],
+  "ExtendedLocation": null,
+  "ResourceGroupName": "rg-freesubnet-australiaeast",
+  "Location": "australiaeast",
+  "ResourceGuid": "6dac3c19-4583-4a63-bbb3-38746d1f6aab",
+  "Type": "Microsoft.Network/virtualNetworks",
+  "Tag": {},
+  "TagsTable": null,
+  "Name": "vnet-freesubnet2-australiaeast",
+  "Etag": "W/\"28d22421-aaea-47e1-a456-f6c3b413e7a8\"",
+  "Id": "/subscriptions/b4b2e7e9-66e7-46b5-a56b-cce2b50011d4/resourceGroups/rg-freesubnet-australiaeast/providers/Microsoft.Network/virtualNetworks/vnet-freesubnet2-australiaeast",
+  "AddressSpaceText": "{\r\n  \"AddressPrefixes\": [\r\n    \"10.1.0.0/16\"\r\n  ]\r\n}",
+  "DhcpOptionsText": "{}",
+  "FlowTimeoutInMinutesText": "null",
+  "SubnetsText": "[]",
+  "BgpCommunitiesText": "null",
+  "EncryptionText": "{\r\n  \"Enabled\": \"False\",\r\n  \"Enforcement\": \"AllowUnencrypted\"\r\n}",
+  "VirtualNetworkPeeringsText": "[]",
+  "EnableDdosProtectionText": "false",
+  "DdosProtectionPlanText": "null",
+  "IpAllocationsText": "[]",
+  "ExtendedLocationText": "null"
+}
+"@ | ConvertFrom-Json
+
+        Mock -ModuleName VNet -CommandName Get-AzVirtualNetwork { return $vnetWithNoSubnets }
+
+        $result = Find-FreeSubnets -ResourceGroup rg-freesubnet-australiaeast -VNetName vnet-freesubnet2-australiaeast
+
+        $expected = [VNetSummary](Get-content .\Find-FreeSubnets-NoExisting.Expected.json | ConvertFrom-Json)
+        $result | Should -BeVNetSummary -ExpectedValue $expected
+    }
 }

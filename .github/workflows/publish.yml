@@ -10,10 +10,10 @@ jobs:
     steps:
       - run: echo "${{ github.event.release.tag_name }}"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: PowerShell Module Cache
-        uses: potatoqualitee/psmodulecache@v6.2
+        uses: potatoqualitee/psmodulecache@v6.2.1
         with:
           modules-to-cache: Az.Network
 

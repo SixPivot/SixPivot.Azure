@@ -18,10 +18,10 @@ jobs:
     steps:
       # Checkout the repository to the GitHub Actions runner
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: PowerShell Module Cache
-        uses: potatoqualitee/psmodulecache@v6.2
+        uses: potatoqualitee/psmodulecache@v6.2.1
         with:
           modules-to-cache: PSScriptAnalyzer, ConvertToSARIF, Az.Network
 

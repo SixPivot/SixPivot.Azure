@@ -2,13 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-
   test:
     name: Test Linux
     strategy:
@@ -16,22 +15,30 @@ jobs:
 
       # PowerShell Docker images - https://mcr.microsoft.com/v2/powershell/tags/list
       # Versions in support - https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-support-lifecycle?view=powershell-7.3&WT.mc_id=DOP-MVP-5001655
+      # Ubuntu support lifecycle - https://endoflife.date/ubuntu
       matrix:
         include:
-          # - version: 6.2.4-ubuntu-18.04
-          #   networkVersion: "2.5.0" # https://www.powershellgallery.com/packages/Az.Network/2.5.0/Content/Az.Network.psm1
-          # - version: 7.0.3-ubuntu-18.04 # 7.0 LTS Out of support
-          #   networkVersion: "5.2.0"
-          - version: lts-ubuntu-22.04 # 7.2 LTS Current
+          # 7.4 LTS, 7.5, 7.6 Preview
+          - version: 7.4-ubuntu-20.04
             networkVersion: "5.2.0"
-          - version: ubuntu-22.04 # 7.4 Stable
+          - version: 7.4-ubuntu-20.04
             networkVersion: "5.2.0"
-          - version: preview-ubuntu-22.04 # 7.5 Preview
-            networkVersion: "5.2.0"
-          - version: ubuntu-22.04 # 7.4
+          - version: 7.4-ubuntu-22.04
             networkVersion: "7.0.0"
-          - version: ubuntu-22.04 # 7.4
-            networkVersion: "7.8.0"
+          - version: 7.4-ubuntu-20.04
+            networkVersion: "7.19.0"
+          - version: 7.5-ubuntu-20.04
+            networkVersion: "7.19.0"
+          - version: 7.5-ubuntu-22.04
+            networkVersion: "7.19.0"
+          - version: 7.5-ubuntu-24.04
+            networkVersion: "7.19.0"
+          - version: preview-7.6-ubuntu-20.04
+            networkVersion: "7.19.0"
+          - version: preview-7.6-ubuntu-22.04
+            networkVersion: "7.19.0"
+          - version: preview-7.6-ubuntu-24.04
+            networkVersion: "7.19.0"
 
     runs-on: ubuntu-22.04
     container: mcr.microsoft.com/powershell:${{ matrix.version }}
@@ -66,7 +73,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-       os: [ windows-2019, windows-2022 ]
+        os: [windows-2025, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5

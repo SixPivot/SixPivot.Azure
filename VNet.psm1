@@ -160,7 +160,7 @@ function Find-FreeSubnets {
                 $ipNum
             }
 
-            $maskToAddresses = @{ 28 = 16; 27 = 32; 26 = 64; 25 = 128 }
+            $maskToAddresses = @{ 28 = 16; 27 = 32; 26 = 64; 25 = 128; 24 = 256 }
             $addressToStarts = @{
             }
 

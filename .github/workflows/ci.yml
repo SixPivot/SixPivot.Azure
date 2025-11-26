@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-22.04
     container: mcr.microsoft.com/powershell:${{ matrix.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install Pester Module
         run: |
@@ -76,7 +76,7 @@ jobs:
         os: [windows-2025, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Remove old Pester
         run: |
@@ -118,7 +118,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

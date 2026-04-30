@@ -157,7 +157,7 @@ function Find-FreeSubnets {
 
             $subnetsInAddressSpace = $vnet.Subnets.AddressPrefix | Where-Object {
                 if ($null -eq $_) { return $false }
-                $subnetStart, $discarded = cidrToIpRange $_
+                $subnetStart, $null = cidrToIpRange $_
                 $subnetStartNum = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($subnetStart.GetAddressBytes(), 0))
                 $subnetStartNum -ge $vnetRangeStart -and $subnetStartNum -le $vnetRangeEnd
             }

@@ -154,6 +154,94 @@ Describe "Find-FreeSubnets" {
         $result | Should -BeVNetSummary -ExpectedValue $expected
     }
 
+    It "Returns expected output with multiple address spaces" {
+
+        $vnetWithMultipleAddressSpaces = @"
+{
+  "AddressSpace": {
+    "AddressPrefixes": [
+      "10.0.0.0/24",
+      "203.0.113.0/24"
+    ]
+  },
+  "DhcpOptions": {
+    "DnsServers": null
+  },
+  "FlowTimeoutInMinutes": null,
+  "Subnets": [
+    {
+      "AddressPrefix": [
+        "10.0.0.0/25"
+      ],
+      "IpConfigurations": [],
+      "ServiceAssociationLinks": [],
+      "ResourceNavigationLinks": [],
+      "NetworkSecurityGroup": null,
+      "RouteTable": null,
+      "NatGateway": null,
+      "ServiceEndpoints": [],
+      "ServiceEndpointPolicies": [],
+      "Delegations": [],
+      "PrivateEndpoints": [],
+      "ProvisioningState": "Succeeded",
+      "PrivateEndpointNetworkPolicies": "Disabled",
+      "PrivateLinkServiceNetworkPolicies": "Enabled",
+      "IpAllocations": [],
+      "Name": "subnet-private",
+      "Etag": "W/\"00000000-0000-0000-0000-000000000001\"",
+      "Id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/vnet-test/subnets/subnet-private"
+    },
+    {
+      "AddressPrefix": [
+        "203.0.113.0/25"
+      ],
+      "IpConfigurations": [],
+      "ServiceAssociationLinks": [],
+      "ResourceNavigationLinks": [],
+      "NetworkSecurityGroup": null,
+      "RouteTable": null,
+      "NatGateway": null,
+      "ServiceEndpoints": [],
+      "ServiceEndpointPolicies": [],
+      "Delegations": [],
+      "PrivateEndpoints": [],
+      "ProvisioningState": "Succeeded",
+      "PrivateEndpointNetworkPolicies": "Disabled",
+      "PrivateLinkServiceNetworkPolicies": "Enabled",
+      "IpAllocations": [],
+      "Name": "subnet-public",
+      "Etag": "W/\"00000000-0000-0000-0000-000000000001\"",
+      "Id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/vnet-test/subnets/subnet-public"
+    }
+  ],
+  "BgpCommunities": null,
+  "Encryption": null,
+  "VirtualNetworkPeerings": [],
+  "ProvisioningState": "Succeeded",
+  "EnableDdosProtection": false,
+  "DdosProtectionPlan": null,
+  "IpAllocations": [],
+  "ExtendedLocation": null,
+  "ResourceGroupName": "rg-test",
+  "Location": "australiaeast",
+  "ResourceGuid": "00000000-0000-0000-0000-000000000002",
+  "Type": "Microsoft.Network/virtualNetworks",
+  "Tag": {},
+  "TagsTable": null,
+  "Name": "vnet-test",
+  "Etag": "W/\"00000000-0000-0000-0000-000000000001\"",
+  "Id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/vnet-test"
+}
+"@ | ConvertFrom-Json
+
+        Mock -ModuleName VNet -CommandName Get-AzVirtualNetwork { return $vnetWithMultipleAddressSpaces }
+
+        $result = Find-FreeSubnets -ResourceGroup rg-test -VNetName vnet-test
+
+        $expected = [VNetSummary](Get-content .\Find-FreeSubnets-MultipleAddressSpaces.Expected.json | ConvertFrom-Json)
+        $result | Should -BeVNetSummary -ExpectedValue $expected
+    }
+
     It "Returns expected output with no existing subnets" {
 
         $vnetWithNoSubnets = @"

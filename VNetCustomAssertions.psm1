@@ -7,6 +7,7 @@
 function Should-BeVNetSummary {
     #[Diagnostics.CodeAnalysis.SuppressMessage("PSUseApprovedVerbs")]
     param(
+        [Parameter(ValueFromPipeline = $true)]
         [VNetSummary] $ActualValue,
         [switch] $Negate,
         #[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter")]
@@ -14,7 +15,7 @@ function Should-BeVNetSummary {
         [VNetSummary] $ExpectedValue
     )
 
-    begin {
+    process {
         if ($Negate.IsPresent) {
             throw "-Negate is not supported"
         }
@@ -37,4 +38,5 @@ function Should-BeVNetSummary {
 
 Add-ShouldOperator -Name BeVNetSummary `
     -InternalName 'Should-BeVNetSummary' `
-    -Test ${function:Should-BeVNetSummary}
+    -Test ${function:Should-BeVNetSummary} `
+    -Alias 'BeVNetSummary'

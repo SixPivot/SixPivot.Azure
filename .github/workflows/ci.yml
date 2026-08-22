@@ -63,6 +63,7 @@ jobs:
           $cfg = [PesterConfiguration]::Default
           $cfg.Output.Verbosity = 'Detailed'
           $cfg.CodeCoverage.Enabled = $true
+          $cfg.CodeCoverage.UseBreakpoints = $true
           $cfg.Run.Exit = $true
 
           Invoke-Pester -Configuration $cfg
@@ -103,6 +104,7 @@ jobs:
           $cfg = [PesterConfiguration]::Default
           $cfg.Output.Verbosity = 'Detailed'
           $cfg.CodeCoverage.Enabled = $true
+          $cfg.CodeCoverage.UseBreakpoints = $true
           $cfg.Run.Exit = $true
 
           Invoke-Pester -Configuration $cfg

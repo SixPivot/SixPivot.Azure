@@ -50,7 +50,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSVersionTable
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -Scope CurrentUser -Repository PSGallery -Force
+          Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Repository PSGallery -Force
           Install-Module -Name Az.Network -requiredVersion ${{ matrix.networkVersion }} -Scope CurrentUser -Repository PSGallery -Force -Verbose
 
           Get-InstalledModule
@@ -63,6 +63,7 @@ jobs:
           $cfg = [PesterConfiguration]::Default
           $cfg.Output.Verbosity = 'Detailed'
           $cfg.CodeCoverage.Enabled = $true
+          $cfg.CodeCoverage.UseBreakpoints = $true
           $cfg.Run.Exit = $true
 
           Invoke-Pester -Configuration $cfg
@@ -91,7 +92,7 @@ jobs:
       - name: PowerShell Module Cache
         uses: potatoqualitee/psmodulecache@v6.3
         with:
-          modules-to-cache: Pester, Az.Network, Az.Accounts
+          modules-to-cache: Pester:6.1.0, Az.Network, Az.Accounts
           shell: powershell
 
       - name: Run Pester Tests
@@ -103,6 +104,7 @@ jobs:
           $cfg = [PesterConfiguration]::Default
           $cfg.Output.Verbosity = 'Detailed'
           $cfg.CodeCoverage.Enabled = $true
+          $cfg.CodeCoverage.UseBreakpoints = $true
           $cfg.Run.Exit = $true
 
           Invoke-Pester -Configuration $cfg

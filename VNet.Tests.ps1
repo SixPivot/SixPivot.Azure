@@ -151,7 +151,7 @@ Describe "Find-FreeSubnets" {
         $result = Find-FreeSubnets -ResourceGroup rg-freesubnet-australiaeast -VNetName vnet-freesubnet-australiaeast
 
         $expected = [VNetSummary](Get-content .\Find-FreeSubnets.Expected.json | ConvertFrom-Json)
-        $result | Should -BeVNetSummary -ExpectedValue $expected
+        $result | Should-BeVNetSummary -ExpectedValue $expected
     }
 
     It "Returns expected output with multiple address spaces" {
@@ -239,7 +239,7 @@ Describe "Find-FreeSubnets" {
         $result = Find-FreeSubnets -ResourceGroup rg-test -VNetName vnet-test
 
         $expected = [VNetSummary](Get-content .\Find-FreeSubnets-MultipleAddressSpaces.Expected.json | ConvertFrom-Json)
-        $result | Should -BeVNetSummary -ExpectedValue $expected
+        $result | Should-BeVNetSummary -ExpectedValue $expected
     }
 
     It "Returns expected output with no existing subnets" {
@@ -295,6 +295,6 @@ Describe "Find-FreeSubnets" {
         $result = Find-FreeSubnets -ResourceGroup rg-freesubnet-australiaeast -VNetName vnet-freesubnet2-australiaeast
 
         $expected = [VNetSummary](Get-content .\Find-FreeSubnets-NoExisting.Expected.json | ConvertFrom-Json)
-        $result | Should -BeVNetSummary -ExpectedValue $expected
+        $result | Should-BeVNetSummary -ExpectedValue $expected
     }
 }

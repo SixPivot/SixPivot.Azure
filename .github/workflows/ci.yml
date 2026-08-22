@@ -13,35 +13,30 @@ jobs:
     strategy:
       fail-fast: true
 
-      # PowerShell Docker images - https://mcr.microsoft.com/v2/powershell/tags/list
-      # Versions in support - https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-support-lifecycle?view=powershell-7.3&WT.mc_id=DOP-MVP-5001655
-      # Ubuntu support lifecycle - https://endoflife.date/ubuntu
+      # PS versions in support: https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-support-lifecycle
+      # .NET SDK Docker images: https://mcr.microsoft.com/v2/dotnet/sdk/tags/list
+      # PS ships inside the .NET SDK image for its corresponding .NET version
       matrix:
         include:
-          # 7.4 LTS, 7.5, 7.6 Preview
-          - version: 7.4-ubuntu-20.04
+          # begin-powershell-versions
+          # PS 7.7 Preview — .NET 11.0
+          - version: 11.0-preview
+            networkVersion: "7.19.0"
+          # PS 7.6 LTS — .NET 10.0
+          - version: 10.0-noble
+            networkVersion: "7.19.0"
+          # PS 7.5 Stable — .NET 9.0
+          - version: 9.0-noble
+            networkVersion: "7.19.0"
+          # PS 7.4 LTS — .NET 8.0
+          - version: 8.0-jammy
             networkVersion: "5.2.0"
-          - version: 7.4-ubuntu-20.04
-            networkVersion: "5.2.0"
-          - version: 7.4-ubuntu-22.04
-            networkVersion: "7.0.0"
-          - version: 7.4-ubuntu-20.04
+          - version: 8.0-noble
             networkVersion: "7.19.0"
-          - version: 7.5-ubuntu-20.04
-            networkVersion: "7.19.0"
-          - version: 7.5-ubuntu-22.04
-            networkVersion: "7.19.0"
-          - version: 7.5-ubuntu-24.04
-            networkVersion: "7.19.0"
-          - version: preview-7.6-ubuntu-20.04
-            networkVersion: "7.19.0"
-          - version: preview-7.6-ubuntu-22.04
-            networkVersion: "7.19.0"
-          - version: preview-7.6-ubuntu-24.04
-            networkVersion: "7.19.0"
+          # end-powershell-versions
 
     runs-on: ubuntu-22.04
-    container: mcr.microsoft.com/powershell:${{ matrix.version }}
+    container: mcr.microsoft.com/dotnet/sdk:${{ matrix.version }}
     steps:
       - uses: actions/checkout@v7
 

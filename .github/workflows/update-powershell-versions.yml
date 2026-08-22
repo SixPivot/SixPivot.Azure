@@ -1,0 +1,210 @@
+name: Update PowerShell Versions
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-versions:
+    name: Check PowerShell Versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check and update PowerShell versions
+        id: check
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # ── 1. Fetch the PowerShell support-lifecycle markdown ──────────────
+          $lifecycleUrl = 'https://raw.githubusercontent.com/MicrosoftDocs/PowerShell-Docs/refs/heads/main/reference/docs-conceptual/install/PowerShell-Support-Lifecycle.md'
+          $markdown = (Invoke-WebRequest -Uri $lifecycleUrl -UseBasicParsing).Content
+          $today = [datetime]::UtcNow
+
+          # Parse version table rows, e.g.:
+          #   | PowerShell 7.6 (LTS) | 18-Mar-2026 | 14-Nov-2028 | [.NET 10.0][07] |
+          #   | PowerShell 7.7 (preview) |           |             | [.NET 11.0][08] |
+          $supportedVersions = [System.Collections.Generic.List[hashtable]]::new()
+          $previewVersions   = [System.Collections.Generic.List[hashtable]]::new()
+
+          $tableRows = ($markdown -split "`n") | Select-String -Pattern '^\|\s*PowerShell\s+([\d.]+)\s*(\([^)]*\))?\s*\|[^|]+\|([^|]+)\|([^|]+)\|'
+          foreach ($row in $tableRows) {
+            $m = [regex]::Match($row.Line, '^\|\s*PowerShell\s+([\d.]+)\s*(\([^)]*\))?\s*\|[^|]+\|([^|]+)\|\s*\[\.NET\s+([\d.]+)')
+            if (-not $m.Success) { continue }
+            $psVersion  = $m.Groups[1].Value.Trim()
+            $qualifier  = $m.Groups[2].Value.Trim().ToLower()
+            $eolRaw     = $m.Groups[3].Value.Trim()
+            $dotnetVer  = $m.Groups[4].Value.Trim()  # e.g. "10.0"
+            $dotnetMajor = $dotnetVer -replace '\..*', ''  # e.g. "10"
+
+            if ($qualifier -like '*(preview)*') {
+              $previewVersions.Add(@{ PSVersion = $psVersion; DotNetMajor = $dotnetMajor })
+              continue
+            }
+            if ([string]::IsNullOrWhiteSpace($eolRaw)) { continue }
+            try {
+              $eolDate = [datetime]::ParseExact($eolRaw, 'dd-MMM-yyyy',
+                [System.Globalization.CultureInfo]::InvariantCulture)
+              if ($eolDate -gt $today) {
+                $supportedVersions.Add(@{ PSVersion = $psVersion; DotNetMajor = $dotnetMajor; EOL = $eolDate })
+              } else {
+                Write-Host "::warning::PowerShell $psVersion reached end-of-support on $($eolDate.ToString('dd-MMM-yyyy'))"
+              }
+            } catch { continue }
+          }
+
+          Write-Host "Supported stable versions: $(($supportedVersions | ForEach-Object { "PS $($_.PSVersion) (.NET $($_.DotNetMajor))" }) -join ', ')"
+          Write-Host "Preview versions:          $(($previewVersions | ForEach-Object { "PS $($_.PSVersion) (.NET $($_.DotNetMajor))" }) -join ', ')"
+
+          # ── 2. Fetch available .NET SDK tags from MCR ─────────────────────
+          $mcrUrl  = 'https://mcr.microsoft.com/v2/dotnet/sdk/tags/list'
+          $mcrJson = (Invoke-WebRequest -Uri $mcrUrl -UseBasicParsing).Content | ConvertFrom-Json
+          $allTags = $mcrJson.tags
+
+          # ── 3. Build expected matrix entries ─────────────────────────────
+          # Tag strategy per .NET major version:
+          #   Stable:  try <major>.0-noble first, then <major>.0-jammy as a second entry
+          #            (older .NET versions had jammy variants; newer ones only have noble)
+          #   Preview: use <major>.0-preview (no distro suffix)
+          $expectedMatrix = [System.Collections.Generic.List[hashtable]]::new()
+
+          foreach ($entry in $supportedVersions) {
+            $dn = $entry.DotNetMajor
+            $ps = $entry.PSVersion
+            $candidates = @("$dn.0-noble", "$dn.0-jammy")
+            foreach ($tag in $candidates) {
+              if ($allTags -contains $tag) {
+                $expectedMatrix.Add(@{ Tag = $tag; PSVersion = $ps; DotNetMajor = $dn })
+              }
+            }
+            if (($expectedMatrix | Where-Object { $_.PSVersion -eq $ps }).Count -eq 0) {
+              Write-Host "::warning::No suitable .NET SDK tag found for PS $ps (.NET $dn)"
+            }
+          }
+
+          foreach ($entry in $previewVersions) {
+            $dn = $entry.DotNetMajor
+            $ps = $entry.PSVersion
+            $tag = "$dn.0-preview"
+            if ($allTags -contains $tag) {
+              $expectedMatrix.Add(@{ Tag = $tag; PSVersion = $ps; DotNetMajor = $dn })
+            } else {
+              Write-Host "::warning::No preview SDK tag '$tag' found for PS $ps"
+            }
+          }
+
+          Write-Host "Expected matrix tags ($($expectedMatrix.Count)):"
+          $expectedMatrix | ForEach-Object { Write-Host "  $($_.Tag)  (PS $($_.PSVersion))" }
+
+          # ── 4. Read current ci.yml ────────────────────────────────────────
+          $ciYmlPath     = '.github/workflows/ci.yml'
+          $ciLines       = Get-Content $ciYmlPath
+          $startSentinel = '# begin-powershell-versions'
+          $endSentinel   = '# end-powershell-versions'
+
+          $startIdx = ($ciLines | Select-String -SimpleMatch $startSentinel).LineNumber - 1
+          $endIdx   = ($ciLines | Select-String -SimpleMatch $endSentinel).LineNumber - 1
+
+          if ($startIdx -lt 0 -or $endIdx -lt 0) {
+            Write-Error "Sentinel comments not found in ci.yml"
+            exit 1
+          }
+
+          $matrixBlock = $ciLines[($startIdx + 1)..($endIdx - 1)]
+          $currentTags = @($matrixBlock |
+            Where-Object { $_ -match '^\s+-\s+version:\s+(\S+)' } |
+            ForEach-Object { ([regex]::Match($_, '^\s+-\s+version:\s+(\S+)')).Groups[1].Value } |
+            Select-Object -Unique | Sort-Object)
+
+          $expectedTagsSorted = @($expectedMatrix | ForEach-Object { $_.Tag } | Sort-Object)
+          Write-Host "Current tags:  $($currentTags -join ', ')"
+
+          $missing = @($expectedTagsSorted | Where-Object { $_ -notin $currentTags })
+          $extra   = @($currentTags | Where-Object { $_ -notin $expectedTagsSorted })
+
+          if ($missing.Count -eq 0 -and $extra.Count -eq 0) {
+            Write-Host "ci.yml is up to date — no changes needed."
+            "needs_update=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          Write-Host "Tags to add:    $($missing -join ', ')"
+          Write-Host "Tags to remove: $($extra   -join ', ')"
+
+          # ── 5. Build new matrix include block ────────────────────────────
+          # Group by DotNetMajor descending (higher .NET = newer PS = first in list)
+          $byDotNet = [ordered]@{}
+          $sorted = $expectedMatrix | Sort-Object { [int]$_.DotNetMajor } -Descending
+          foreach ($entry in $sorted) {
+            $dn = $entry.DotNetMajor
+            if (-not $byDotNet.Contains($dn)) { $byDotNet[$dn] = [System.Collections.Generic.List[hashtable]]::new() }
+            $byDotNet[$dn].Add($entry)
+          }
+
+          # networkVersion: oldest PS version's first tag → 5.2.0, second → 7.0.0, all others → 7.19.0
+          $oldestDotNet = $byDotNet.Keys | Select-Object -Last 1
+
+          $newMatrixLines = [System.Collections.Generic.List[string]]::new()
+          foreach ($dn in $byDotNet.Keys) {
+            $entries  = $byDotNet[$dn]
+            $psVer    = ($entries | Select-Object -First 1).PSVersion
+            $isPreview = $psVer -in ($previewVersions | ForEach-Object { $_.PSVersion })
+            $label    = if ($isPreview) { "PS $psVer Preview — .NET $dn.0" } else { "PS $psVer — .NET $dn.0" }
+            $newMatrixLines.Add("          # $label")
+
+            $i = 0
+            foreach ($e in $entries) {
+              if ($dn -eq $oldestDotNet) {
+                $nv = if ($i -eq 0) { '5.2.0' } else { '7.0.0' }
+              } else {
+                $nv = '7.19.0'
+              }
+              $newMatrixLines.Add("          - version: $($e.Tag)")
+              $newMatrixLines.Add("            networkVersion: `"$nv`"")
+              $i++
+            }
+          }
+
+          # Splice new block into ci.yml
+          $beforeBlock = $ciLines[0..($startIdx)]
+          $afterBlock  = $ciLines[$endIdx..($ciLines.Count - 1)]
+          $newContent  = ($beforeBlock + $newMatrixLines + $afterBlock) -join "`n"
+          Set-Content -Path $ciYmlPath -Value $newContent -NoNewline
+          Write-Host "ci.yml updated successfully."
+
+          # ── 6. Write PR body ─────────────────────────────────────────────
+          $prBody = @"
+          ## PowerShell version matrix update
+
+          The weekly version check found differences between the currently supported PowerShell versions and the CI matrix.
+
+          ### Tags added
+          $(if ($missing) { ($missing | ForEach-Object { "- ``$_``" }) -join "`n" } else { '_none_' })
+
+          ### Tags removed
+          $(if ($extra) { ($extra | ForEach-Object { "- ``$_``" }) -join "`n" } else { '_none_' })
+
+          ### References
+          - [PowerShell Support Lifecycle](https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-support-lifecycle)
+          - [.NET SDK Docker images](https://mcr.microsoft.com/v2/dotnet/sdk/tags/list)
+          "@
+          $prBody | Out-File -FilePath 'pr_body.md' -Encoding utf8
+          "needs_update=true" >> $env:GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.check.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "ci: update PowerShell version matrix"
+          branch: update/powershell-versions
+          delete-branch: true
+          title: "ci: update PowerShell version matrix"
+          body-path: pr_body.md
+          labels: dependencies

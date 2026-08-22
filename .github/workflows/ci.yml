@@ -13,32 +13,32 @@ jobs:
     strategy:
       fail-fast: true
 
-      # PowerShell Docker images - https://mcr.microsoft.com/v2/powershell/tags/list
-      # Versions in support - https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-support-lifecycle?view=powershell-7.3&WT.mc_id=DOP-MVP-5001655
-      # Ubuntu support lifecycle - https://endoflife.date/ubuntu
+      # Versions in support: https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-support-lifecycle
+      # PowerShell Docker images: https://mcr.microsoft.com/v2/powershell/tags/list
+      # Ubuntu support lifecycle: https://endoflife.date/ubuntu
       matrix:
         include:
-          # 7.4 LTS, 7.5, 7.6 Preview
-          - version: 7.4-ubuntu-20.04
-            networkVersion: "5.2.0"
-          - version: 7.4-ubuntu-20.04
-            networkVersion: "5.2.0"
-          - version: 7.4-ubuntu-22.04
+          # begin-powershell-versions
+          # 7.6 LTS (stable tag not yet on MCR, using preview image)
+          - version: preview-7.6-ubuntu-20.04
             networkVersion: "7.0.0"
-          - version: 7.4-ubuntu-20.04
+          - version: preview-7.6-ubuntu-22.04
             networkVersion: "7.19.0"
+          - version: preview-7.6-ubuntu-24.04
+            networkVersion: "7.19.0"
+          # 7.5 Stable
           - version: 7.5-ubuntu-20.04
             networkVersion: "7.19.0"
           - version: 7.5-ubuntu-22.04
             networkVersion: "7.19.0"
           - version: 7.5-ubuntu-24.04
             networkVersion: "7.19.0"
-          - version: preview-7.6-ubuntu-20.04
+          # 7.4 LTS
+          - version: 7.4-ubuntu-20.04
+            networkVersion: "5.2.0"
+          - version: 7.4-ubuntu-22.04
             networkVersion: "7.19.0"
-          - version: preview-7.6-ubuntu-22.04
-            networkVersion: "7.19.0"
-          - version: preview-7.6-ubuntu-24.04
-            networkVersion: "7.19.0"
+          # end-powershell-versions
 
     runs-on: ubuntu-22.04
     container: mcr.microsoft.com/powershell:${{ matrix.version }}

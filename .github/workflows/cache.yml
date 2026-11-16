@@ -1,0 +1,22 @@
+name: Cache Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/powershell:ubuntu-22.04
+    steps:
+
+      - run: |
+          Get-ChildItem Env: | Sort-Object Name | Format-Table -Wrap -AutoSize
+        shell: pwsh
+
+      - name: PowerShell Module Cache
+        uses: potatoqualitee/psmodulecache@v5.2
+        with:
+          modules-to-cache: Az.Network
